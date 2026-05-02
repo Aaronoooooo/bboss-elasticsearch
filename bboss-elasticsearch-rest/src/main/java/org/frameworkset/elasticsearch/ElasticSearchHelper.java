@@ -36,6 +36,7 @@ public class ElasticSearchHelper {
 
     /**
      * 如果需要释放资源，需要手动在应用结束时，调用destroyConfigHolder方法
+     * 全局释放资源，不能在关闭数据源时释放
      */
     public static void destroyConfigHolder(){
         configHolder.destory();

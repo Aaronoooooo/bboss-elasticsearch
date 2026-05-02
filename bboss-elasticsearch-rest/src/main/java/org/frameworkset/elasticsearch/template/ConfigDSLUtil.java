@@ -27,8 +27,6 @@ import org.frameworkset.elasticsearch.client.ConfigHolder;
 import org.frameworkset.elasticsearch.serial.CharEscapeUtil;
 import org.frameworkset.elasticsearch.serial.CustomCharEscapeUtil;
 import org.frameworkset.elasticsearch.serial.SerialUtil;
-import org.frameworkset.persitent.template.SQLTemplateFactory;
-import org.frameworkset.persitent.util.SQLInfo;
 import org.frameworkset.soa.BBossStringWriter;
 import org.frameworkset.spi.assemble.Param;
 import org.frameworkset.util.ClassUtil;
