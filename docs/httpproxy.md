@@ -2036,9 +2036,9 @@ public class FeishuAuthorTokenFunction implements AuthorTokenFunction {
 
 # 9.请求和响应拦截器配置
 
-请求拦截器：HttpRequestInterceptor
+请求拦截器：HttpRequestInterceptor，带ClientConfiguration的抽象类ClientConfigurationHttpRequestInterceptor
 
-响应拦截器：HttpResponseInterceptor
+响应拦截器：HttpResponseInterceptor，带ClientConfiguration的抽象类ClientConfigurationHttpResponseInterceptor
 
 在bboss配置文件application.properties中设置HttpRequestInterceptor和HttpResponseInterceptor，多个用逗号分隔，自定义httpquest请求处理。
 
@@ -2064,6 +2064,44 @@ public class HttpRequestInterceptorDemo1 implements HttpRequestInterceptor{
     @Override
     public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
         request.addHeader("name1","test1");
+    }
+}
+```
+
+ClientConfigurationHttpRequestInterceptor实现样例（http5）
+
+```java
+public class ContentAuditHttpInterceptor extends ClientConfigurationHttpRequestInterceptor {
+    
+    @Override
+    public void process(HttpRequest httpRequest, EntityDetails entityDetails, HttpContext httpContext) throws HttpException, IOException {
+       String timestamp = String.valueOf(System.currentTimeMillis());
+       String appkey = clientConfiguration.getExtendConfig("appkey");
+       String rsakey = clientConfiguration.getExtendConfig("rsakey");
+       
+       try {
+          String sign = RsaUtil.encrypt(rsakey, appkey + timestamp);
+          httpRequest.addHeader("sign", appkey + ":" + sign);
+          httpRequest.addHeader("timestamp", timestamp);
+       } catch (Exception e) {
+          throw new RuntimeException(e);
+       }
+       
+    }
+}
+```
+
+ReponseInterceptdemo
+
+```java
+public class ContentAuditHttpResponseInterceptor extends ClientConfigurationHttpResponseInterceptor {
+ 
+    
+    @Override
+    public void process(HttpResponse httpResponse, EntityDetails entityDetails, HttpContext httpContext) throws HttpException, IOException {
+       String timestamp = String.valueOf(System.currentTimeMillis());
+       String appkey = clientConfiguration.getExtendConfig("appkey");
+       String rsakey = clientConfiguration.getExtendConfig("rsakey");
     }
 }
 ```

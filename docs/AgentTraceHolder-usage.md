@@ -208,3 +208,10 @@ AgentTraceHolder.emitterServerEvent(serverEvent);
 | **统一 `role` 标识** | 根据调用类型使用框架定义的常量，如 `MESSAGE_TYPE_TOOLCALL_MESSAGE_NAME`、`MESSAGE_TYPE_MCPCALL_MESSAGE_NAME` |
 | **异常场景考虑补全追踪** | 在 `catch` 块中可补充记录异常信息并上报，避免调用失败时追踪链路断裂 |
 | **流式事件与追踪消息区分使用** | `trace()` 用于后端链路追踪；`emitterServerEvent()` 用于向客户端推送实时数据 |
+
+## 五、参考资料
+
+bboss ai：https://esdoc.bbossgroups.com/#/bboss-ai
+
+自定义消息类型：[扩展消息类型](https://esdoc.bbossgroups.com/#/bboss-ai?id=_313-扩展消息类型)
+

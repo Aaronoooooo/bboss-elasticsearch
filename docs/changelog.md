@@ -48,6 +48,7 @@
 ```
 
 ETL插件依赖的maven坐标，参考文档：[在工程中导入插件maven坐标](https://esdoc.bbossgroups.com/#/db-es-tool?id=_11-在工程中导入bboss-maven坐标)
+
 2）导入智能体框架
 Maven 依赖
 
@@ -65,8 +66,13 @@ Gradle 依赖
 implementation 'com.bbossgroups:bboss-ai-flow:6.5.3'
 ```
 # v7.5.7 功能改进-20260628 (待发布)
-1. 智能体框架改进：增加命令执行工具CLIShellFunctionTool
+1. 智能体框架改进：增加一系列内置工具，包括命令执行工具CLIShellFunctionTool、代码执行工具CodeExecuteFunctionTool、文件管理工具FileFunctionTool以及操作系统信息查询工具GetOSFunctionTool
+
 2. 智能体框架改进：提供[加载外部资源文件系统中提示词机制](https://esdoc.bbossgroups.com/#/bboss-ai-prompt-resource)，可从文件系统、url链接加载文件或者classpath资源文件加载提示词据内容，融合到提示词工程中
+
+3. 智能体框架改进：修复一系列框架bug，完善可观测性功能
+
+   
 # v7.5.6 功能改进-20260621
 1. 改进IP地址解析组件：增加对不存在IP地址库文件的监听，一旦IP地址库文件存在后就自动进行热加载
 2. 扩展DaemonThread：增加对不存在文件的监听，一旦文件存在后就自动进行热加载
