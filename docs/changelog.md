@@ -56,23 +56,42 @@ Maven 依赖
 <dependency>
     <groupId>com.bbossgroups</groupId>
     <artifactId>bboss-ai-flow</artifactId>
-    <version>6.5.3</version>
+    <version>6.5.5</version>
 </dependency>
 ```
 
 Gradle 依赖
 
 ```groovy
-implementation 'com.bbossgroups:bboss-ai-flow:6.5.3'
+implementation 'com.bbossgroups:bboss-ai-flow:6.5.5'
 ```
-# v7.5.7 功能改进-20260628 (待发布)
-1. 智能体框架改进：增加一系列内置工具，包括命令执行工具CLIShellFunctionTool、代码执行工具CodeExecuteFunctionTool、文件管理工具FileFunctionTool以及操作系统信息查询工具GetOSFunctionTool
+# [Agent] V6.5.5 功能改进-20260710
+1. 智能体框架改进：增加一系列[内置工具](https://esdoc.bbossgroups.com/#/bboss-ai?id=_84-%e5%86%85%e7%bd%ae%e5%b7%a5%e5%85%b7)，包括命令执行工具CLIShellFunctionTool、代码执行工具CodeExecuteFunctionTool、文件管理工具FileFunctionTool以及操作系统信息查询工具GetOSFunctionTool
 
 2. 智能体框架改进：提供[加载外部资源文件系统中提示词机制](https://esdoc.bbossgroups.com/#/bboss-ai-prompt-resource)，可从文件系统、url链接加载文件或者classpath资源文件加载提示词据内容，融合到提示词工程中
 
 3. 智能体框架改进：修复一系列框架bug，完善可观测性功能
 
-   
+4. 智能体框架改进：完善[多轮工具调用能力](https://esdoc.bbossgroups.com/#/bboss-ai?id=_83-%e5%a4%9a%e8%bd%ae%e5%b7%a5%e5%85%b7%e8%b0%83%e7%94%a8%ef%bc%88loop-tool-call%ef%bc%89)（loop-tool-call）
+
+5. 智能体会话记忆管理改进：增加[Clickhouse存储](https://esdoc.bbossgroups.com/#/bboss-ai?id=clickhouse%e4%bc%9a%e8%af%9d%e5%ad%98%e5%82%a8%e9%85%8d%e7%bd%ae)会话记忆以及可观测检测数据功能，生产环境推荐使用
+
+6. 智能体可观测性改进：token统计中增加了promptCacheHitTokens和promptCacheMissTokens两个指标
+
+7. 智能体工作流改进：stream处理机制完善，评估智能体和路由智能体支持stream机制
+
+8. 智能体改进：单智能体、多智能体（非工作流）也可以从外部资源文件中加载提示词工程
+
+9. 智能体工作流改进：消息表增加产生消息的智能体容器类型，容器消息来源的子智能体字段
+
+10. 微服务框架改进：增加获取ClientConfiguration的ClientConfigurationHttpRequestInterceptor和ClientConfigurationHttpResponseInterceptor，以便在request和Response拦截器中获取服务配置参数
+
+    ```java
+    import org.frameworkset.spi.remote.http.callback.ClientConfigurationHttpRequestInterceptor;
+    import org.frameworkset.spi.remote.http.callback.ClientConfigurationHttpResponseInterceptor;
+    ```
+
+    
 # v7.5.6 功能改进-20260621
 1. 改进IP地址解析组件：增加对不存在IP地址库文件的监听，一旦IP地址库文件存在后就自动进行热加载
 2. 扩展DaemonThread：增加对不存在文件的监听，一旦文件存在后就自动进行热加载
@@ -2388,7 +2407,7 @@ maven坐标：
     <dependency>
       <groupId>com.bbossgroups</groupId>
       <artifactId>bboss-spring-boot-starter</artifactId>
-      <version> 6.5.3</version>
+      <version>6.5.3</version>
      
     </dependency>
 ```

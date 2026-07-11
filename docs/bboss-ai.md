@@ -56,14 +56,14 @@ demo工程：https://gitee.com/bboss/bbootdemo
 <dependency>
     <groupId>com.bbossgroups</groupId>
     <artifactId>bboss-ai-flow</artifactId>
-    <version>6.5.3</version>
+    <version>6.5.5</version>
 </dependency>
 ```
 
 ### 2.2 Gradle 依赖
 
 ```groovy
-implementation 'com.bbossgroups:bboss-ai-flow:6.5.3'
+implementation 'com.bbossgroups:bboss-ai-flow:6.5.5'
 ```
 
 ### 2.3 maas服务配置

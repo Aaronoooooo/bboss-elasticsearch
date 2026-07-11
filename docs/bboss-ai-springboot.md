@@ -17,7 +17,7 @@
 
 ```groovy 
 api (
-        [group: 'com.bbossgroups', name: 'bboss-ai-flow', version: '6.5.3', transitive: true],
+        [group: 'com.bbossgroups', name: 'bboss-ai-flow', version: '6.5.5', transitive: true],
 )
 ```
 

@@ -32,7 +32,7 @@ bboss http基于httpclient4实现，不支持流式服务调用，也不支持ht
 <dependency>
    <groupId>com.bbossgroups</groupId>
    <artifactId>bboss-http5</artifactId>
-   <version>6.5.3</version>
+   <version>6.5.5</version>
 </dependency>
 ```
 
@@ -75,15 +75,15 @@ ip:port（默认http协议）
 ```xml
 <dependency>
    <groupId>com.bbossgroups</groupId>
-   <artifactId>bboss-http</artifactId>
-   <version>6.5.3</version>
+   <artifactId>bboss-http5</artifactId>
+   <version>6.5.5</version>
 </dependency>
 ```
 
 如果是gradle工程，导入方法如下：
 
 ```groovy
-api 'com.bbossgroups:bboss-http: 6.5.3'
+api 'com.bbossgroups:bboss-http5: 6.5.5'
 ```
 
 # 3.负载均衡器配置和初始化

@@ -27,8 +27,8 @@ bboss 配置化DSL微服务调用框架基于 [bboss http/http5 负载均衡器]
 ```xml
 <dependency>
    <groupId>com.bbossgroups</groupId>
-   <artifactId>bboss-http</artifactId>
-   <version>6.5.3</version>
+   <artifactId>bboss-http5</artifactId>
+   <version>6.5.5</version>
 </dependency>
 ```
 
@@ -37,14 +37,14 @@ bboss 配置化DSL微服务调用框架基于 [bboss http/http5 负载均衡器]
 > <dependency>
 >    <groupId>com.bbossgroups</groupId>
 >    <artifactId>bboss-http5</artifactId>
->    <version>6.5.3</version>
+>    <version>6.5.5</version>
 > </dependency>
 > ```
 
 ### Gradle
 
 ```groovy
-api 'com.bbossgroups:bboss-http:6.5.3'
+api 'com.bbossgroups:bboss-http5:6.5.5'
 ```
 
 ## 4. DSL配置文件规范
