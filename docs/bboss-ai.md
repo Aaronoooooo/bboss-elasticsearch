@@ -2,51 +2,65 @@
 
 ## 一、概述
 
-bboss AI 是一个轻量级多模态 Java 大模型智能体客户端，基于 HttpClient5、HttpCore5 以及 Reactor 构建。它支持同步和流式两种调用模式，能够快速集成各大主流 AI 模型平台，实现智能问答、图片识别/生成、语音识别/生成、视频识别/生成等功能。
+**bboss-ai** 是一个轻量级 Java AI Agent 开发客户端，基于 Apache HttpClient5、HttpCore5 以及 Project Reactor 构建，提供了对大语言模型（LLM）和多模态模型的统一对接能力，支持同步调用和流式调用两种模式，并内置智能体工作流编排、会话管理、工具搜索等企业级特性。能够快速集成各大主流 AI 模型平台，实现智能问答、图片识别/生成、语音识别/生成、视频识别/生成等功能。![img](https://oscimg.oschina.net/oscnet//033e49f9d01fb48e25a7e3a708bf16ff.png)
 
-同时可以通过编写自定义的适配器，快速适配和对接遵循openai规范的本地私有Maas平台。
+**ClickHouse 生产级会话存储**：bboss-ai 支持基于 ClickHouse 分布式集群的生产级会话持久化能力。使用时需要指定 ClickHouse 集群名称，并为每个集群节点定义名为 `shard` 和 `replica` 的两个宏变量。ClickHouse 模式下会话续问续答时不会更新最后访问时间（受限于 ClickHouse 不支持高频 UPDATE）。详细使用方式参见 [Clickhouse会话存储管理](#chatper14-122) 章节。
 
-![](images\bboss-ai.png)
+### 核心功能
 
-### 核心特性
+- **模型能力**：兼容 DeepSeek、Kimi、智谱、阿里百炼通义千问、字节豆包火山引擎、MiniMax、腾讯混元、中国移动九天、chatgpt等主流 MaaS 平台；通过简单的适配和扩展即可支持私有化模型平台
 
-- **多模型支持**：兼容 DeepSeek、Kimi、智谱、阿里百炼通义千问、字节豆包火山引擎、MiniMax、腾讯混元、中国移动九天等主流 MaaS 平台；通过简单的适配和扩展即可支持私有化模型平台
+- **流式响应**：基于 Reactor 的响应式编程模型，支持背压控制机制
 
 - **工具能力**：支持工具调用和 MCP 服务发现，提供 MCP SSE 和 Streamable 两种通讯协议，同时提供mcp server协议实现
 
+  - 工具调用（Function Calling）
+  - MCP（Model Context Protocol）服务发现和调用，支持 SSE 和 Streamable HTTP 两种传输模式
+  - 可快速发布供LLM调用的工具服务和MCP服务
+  - 多轮工具调用（Loop Tool Call），支持智能体自主决策多步骤任务执行
+  - 脚本执行工具（Shell/CLI）和代码执行工具（Python/NodeJS）
+  - Skills 技能模块，支持沙箱隔离和动态加载
+  - 工具搜索（Tool Searcher），支持基于关键词和语义的工具过滤
+
 - **多模态支持**：支持文本、图片、音频、视频等多种模态的识别与生成
 
-- **流式响应**：基于 Reactor 的响应式编程模型，支持背压控制
+  - 图片识别与生成（Vision/Image Generation）
+  - 语音识别与合成（Speech-to-Text/Text-to-Speech）
+  - 视频识别与生成（Video Understanding/Generation）
 
-- **多轮会话**：内置会话记忆管理，支持多轮对话；支持内存和数据库两种会话持久化方式
+- **检索增强生成（RAG）：**内置文本向量化（Embedding）和重排序（Rerank）能力，支持知识库检索增强生成（RAG）
 
-- **智能体工作流编排**：基于有向循环图实现多智能体协同工作流，支持串行、并行、路由、条件分支、裁判评估等丰富的流程编排能力，快速构建复杂多智能体系统
+  - 向量嵌入（Embedding）
+  - 重排序（Rerank）
+  - 支持Elasticsearch、Milvus主流向量数据库
 
-  ![](images\workflow\jobworkflow.png)
+- **多智能体协同**：基于有向循环图实现多智能体协同工作流，支持串行、并行、路由、条件分支、裁判评估等丰富的流程编排能力，快速构建复杂多智能体系统
 
-  
+  ![img](images\workflow\jobworkflow.png)![img](images\workflow\bbossgraph.png)
 
-  ![](images\workflow\bbossgraph.png)
+  -  多智能体编排工作流底层基于[bboss jobflow](https://esdoc.bbossgroups.com/#/jobworkflow)实现（一套数据交换作业编排工作流）
 
-  多智能体编排工作流底层基于[bboss jobflow](https://esdoc.bbossgroups.com/#/jobworkflow)实现（一套数据交换作业编排工作流）
+- **多轮会话**：支持会话长短期记忆管理,会话消息智能压缩；支持多智能体协同通讯和信息共享；子智能体独立会话空间，彼此隔离，互不干扰；支持内存、关系数据库（MySQL、Oracle、达梦 DM、SQL Server、PostgreSQL、SQLite）、Clickhouse多种会话持久化机制，生产级推荐Clickhouse。
 
-- **向量模型支持**：内置文本向量化（Embedding）和重排序（Rerank）能力，支持知识库检索增强生成（RAG）
+- **智能体任务调度：灵活的智能体工作流任务**定时调度执行能力，可制定节假日或或者特定时间段忽略执行策略
 
-- **多智能体协同**：配合bboss graph提供的工作流和有限循环图，实现多智能体协同，快速构建多智能体系统
+- **全链路监控：**智能体全链路 Trace 可观测性，覆盖 LLM 调用、工具执行、工作流编排；可基于智能体trace api，应用可自主记录智能体流程执行过程中的任何状态信息、数据信息和中间结果信息。
 
----
+### 支持的平台
 
-### 项目源码
-
-bboss ai 源码地址：
-
-码云    https://gitee.com/bboss/bboss-ai
-
-github  https://github.com/bbossgroups/bboss-ai
-
-源码构建参考文档：https://esdoc.bbossgroups.com/#/bboss-build
-
-demo工程：https://gitee.com/bboss/bbootdemo
+- DeepSeek
+- Kimi（Moonshot）
+- 智谱 AI（Zhipu）
+- 阿里百炼/通义千问（Qwen）
+- 字节豆包/火山引擎（Doubao）
+- 百度（Baidu）
+- 硅基流动（Siliconflow）
+- 九天（Jiutian）
+- MiniMax
+- 腾讯混元（TencentHY）
+- Xinference
+- OpenAI 兼容接口
+- ChatGPT
 
 ## 二、环境准备
 
@@ -1797,6 +1811,8 @@ SQLUtil.startPool("visualops",//数据源名称
 
 ##### Clickhouse会话存储配置
 
+<a id="chatper14-122"></a>
+
 Clickhouse存储会话配置，生产环境推荐使用Clickhouse存储
 
 ```java
@@ -3436,8 +3452,6 @@ Trace 消息与业务消息统一存储在同一张表中，通过 `messageType`
 - **技术交流群**：21220580、166471282
 
 - **参考文档**：https://doc.bbossgroups.com/#/mvc/chatstream
-
-- **源码地址**：https://gitee.com/bboss/bboss-ai
 
 - **多模态智能问答web demo**：https://gitee.com/bboss/bbootdemo
   关键代码：
