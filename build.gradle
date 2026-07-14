@@ -102,7 +102,8 @@ configure([project(":bboss-elasticsearch-rest-entity"),
 		   //project(":bboss-elasticsearch"),
 		   project(":bboss-elasticsearch-rest-booter"), 
            project(":bboss-elasticsearch-spring-boot-starter"),
-           project(":bboss-elasticsearch-spring-boot3-starter")]) { subproject ->
+           project(":bboss-elasticsearch-spring-boot3-starter"),
+           project(":bboss-elasticsearch-spring-boot4-starter")]) { subproject ->
 
 	publishing {
 		publications {
