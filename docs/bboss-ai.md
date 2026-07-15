@@ -2681,6 +2681,7 @@ aiPlanAgent.addAgent(parrelAgent);
 - **Prompt 变量引用**：在提示词中通过占位符动态注入其他节点的输出结果
 - **内置变量**：框架自动注入的流程级变量，如用户输入、系统提示等
 - **上下文变量**：通过 `JobFlowNodeExecuteContext` 或 `NodeTriggerContext` 在代码层面读写
+- **智能体参数变量**：通过Agent.addParam(key,value)方式添加,主要用于非工作流场景，添加的变量，可以智能体提示词和系统提示词中使用
 
 #### 14.10.2 设置输出变量
 
@@ -2770,6 +2771,21 @@ aiPlanAgent.addAgent(new AIFlowNode() {
 | `input.system` | 系统提示词（System Prompt） |
 | `judgeAgent.judgeResult` | `AIJudgeAgent` 裁判节点的评估结果 |
 
+#### 14.10.8 智能体参数变量
+
+在非工作流智能体中，亦可以使用外部资源变量和智能体参数变量，示例如下
+
+智能体参数变量：
+
+```java
+      //定义提示词
+      String message = "介绍一下bboss jobflow #[version]";
+AIAgent aiAgent = new AIAgent();
+aiAgent.addParam("version","7.5.7");//添加version参数，用于在问题中替换#[version]
+```
+
+外部资源：参考章节[14.11 加载外部资源提示词](#chapter1411)
+
 #### 14.10.7 完整示例
 
 以下示例演示了从变量定义、Prompt 引用到代码获取的完整流程：
@@ -2799,6 +2815,8 @@ aiPlanAgent.addAgent(new AIFlowNode() {
 ```
 
 ### 14.11 加载外部资源提示词
+
+<a id="chapter1411"></a>
 
 智能体支持三种加载外部资源提示词的方法：
 

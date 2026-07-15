@@ -249,15 +249,15 @@ console.log(unique);
 
 ### 4.1 功能说明
 
-提供文件与目录的增删改查、内容读写、编码识别、属性获取等 9 个工具方法，支持通过 `baseDirectory` 限制操作范围以防止路径穿越攻击。
+提供文件与目录的增删改查、内容读写、编码识别、属性获取等 9 个工具方法，支持通过 `baseDirectory` 限制操作范围以防止路径穿越攻击,可以指定多个限制目录。
 
 ### 4.2 配置选项
 
-| 配置方式                                 | 说明                           |
-| ---------------------------------------- | ------------------------------ |
-| `FileFunctionTool()`                     | 默认构造，**不限制**操作目录   |
-| `FileFunctionTool(String baseDirectory)` | 限制只能操作该基目录及其子目录 |
-| `setBaseDirectory(String baseDirectory)` | 链式设置基目录，返回 `this`    |
+| 配置方式                                    | 说明                            |
+| ------------------------------------------- | ------------------------------- |
+| `FileFunctionTool()`                        | 默认构造，**不限制**操作目录    |
+| `FileFunctionTool(String baseDirectory)`    | 限制只能操作该基目录及其子目录  |
+| `addBaseDirectory(String... baseDirectory)` | 设置一到多个基目录，返回 `this` |
 
 > **⚠️ 路径校验警告**：设置 `baseDirectory` 后，所有路径经规范化（统一分隔符、去重复斜杠）后必须以基目录开头，否则抛出 `IllegalArgumentException`。
 
@@ -722,13 +722,14 @@ Hello World
 
 | 防护措施               | 说明                                                         |
 | ---------------------- | ------------------------------------------------------------ |
-| **设置 baseDirectory** | 强烈建议为 `FileFunctionTool` 设置基目录，限制模型只能操作指定目录树 |
+| **设置 baseDirectory** | 强烈建议为 `FileFunctionTool` 设置基目录，限制模型只能操作指定目录树，可以指定多个不同的目录 |
 | **路径规范化校验**     | 自动统一分隔符、去除重复斜杠，防止 `../` 路径穿越攻击        |
 | **违规行为拦截**       | 越权访问时抛出 `IllegalArgumentException`，不会执行操作      |
 
 ```java
 // ✅ 正确做法：限制操作范围
 FileFunctionTool safeTool = new FileFunctionTool("/data/safe");
+safeTool.addBaseDirectory("d1","d2");
 
 // ❌ 错误做法：不限制操作范围（危险！）
 FileFunctionTool unsafeTool = new FileFunctionTool();
@@ -777,7 +778,7 @@ public void checkEnvironment() {
 | 超时行为     | 超时后底层 `Process` 会被 `destroyForcibly()` 强制终止    |
 | 默认超时     | 60 秒，可根据业务场景调整                                 |
 
-​```java
+```java
 // 为不同工具设置不同超时
 CLIShellFunctionTool shellTool = new CLIShellFunctionTool(120);  // 长任务 2 分钟
 CodeExecuteFunctionTool codeTool = new CodeExecuteFunctionTool(30); // 短任务 30 秒
@@ -791,7 +792,7 @@ GetOSFunctionTool osTool = new GetOSFunctionTool(10);            // 快速任务
 | `setEnableLoopToolCall(true)` | 启用循环工具调用，支持多步骤任务   | 复杂任务开启             |
 | `setMaxLoopToolCalls(int)`    | 最大循环次数，防止模型陷入无限循环 | 20-100，视任务复杂度而定 |
 
-```java
+​```java
 agent.setEnableLoopToolCall(true);
 agent.setMaxLoopToolCalls(50);  // 50 次后强制停止
 ```
