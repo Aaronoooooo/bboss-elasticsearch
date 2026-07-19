@@ -2,7 +2,7 @@
 
 ## 一、概述
 
-**bboss-ai** 是一个轻量级 Java AI Agent 开发客户端，基于 Apache HttpClient5、HttpCore5 以及 Project Reactor 构建，提供了对大语言模型（LLM）和多模态模型的统一对接能力，支持同步调用和流式调用两种模式，并内置智能体工作流编排、会话管理、工具搜索等企业级特性。能够快速集成各大主流 AI 模型平台，实现智能问答、图片识别/生成、语音识别/生成、视频识别/生成等功能。![img](https://oscimg.oschina.net/oscnet//033e49f9d01fb48e25a7e3a708bf16ff.png)
+**bboss-ai** 是一个轻量级 Java AI Agent 开发客户端，基于 Apache HttpClient5、HttpCore5 以及 Project Reactor 构建，提供了对大语言模型（LLM）和多模态模型的统一对接能力，支持同步调用和流式调用两种模式，并内置智能体工作流编排、会话管理、工具搜索等企业级特性。能够快速集成各大主流 AI 模型平台，实现智能问答、图片识别/生成、语音识别/生成、视频识别/生成等功能。![img](images\bboss-ai.png)
 
 **ClickHouse 生产级会话存储**：bboss-ai 支持基于 ClickHouse 分布式集群的生产级会话持久化能力。使用时需要指定 ClickHouse 集群名称，并为每个集群节点定义名为 `shard` 和 `replica` 的两个宏变量。ClickHouse 模式下会话续问续答时不会更新最后访问时间（受限于 ClickHouse 不支持高频 UPDATE）。详细使用方式参见 [Clickhouse会话存储管理](#chatper14-122) 章节。
 
@@ -19,7 +19,7 @@
   - 可快速发布供LLM调用的工具服务和MCP服务
   - 多轮工具调用（Loop Tool Call），支持智能体自主决策多步骤任务执行
   - 脚本执行工具（Shell/CLI）和代码执行工具（Python/NodeJS）
-  - Skills 技能模块，支持沙箱隔离和动态加载
+  - Skills 技能模块，支持技能注册、加载、调度执行及可观测性监测
   - 工具搜索（Tool Searcher），支持基于关键词和语义的工具过滤
 
 - **多模态支持**：支持文本、图片、音频、视频等多种模态的识别与生成

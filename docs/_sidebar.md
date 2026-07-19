@@ -1,6 +1,7 @@
 - [BBOSS介绍](README.md)
 - 多模态智能体
   - [bboss ai使用教程](bboss-ai.md)
+  -  [技能使用文档](bboss-ai-skills.md) 
   - [AI 工具注解功能使用教程](bboss-ai-toolannotation.md)
   - [AI 工具类发布为Mcp服务使用教程](bboss-ai-mcpbean.md)
   - [MCP Bean Tool 服务与 Spring Boot 集成使用文档](bboss-ai-springboot.md)
