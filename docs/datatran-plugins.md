@@ -2399,11 +2399,11 @@ ElasticsearchOutputConfig elasticsearchOutputConfig = new ElasticsearchOutputCon
 
 ### 2.2.3 插件参考文档
 
-[设置ES数据导入控制参数](https://esdoc.bbossgroups.com/#/db-es-tool?id=_2816-设置es数据导入控制参数)
+[设置ES数据导入控制参数](https://esdoc.bbossgroups.com/#/db-es-tool?id=_4816-%e8%ae%be%e7%bd%aees%e6%95%b0%e6%8d%ae%e5%af%bc%e5%85%a5%e6%8e%a7%e5%88%b6%e5%8f%82%e6%95%b0)
 
-[灵活指定索引名称和索引类型](https://esdoc.bbossgroups.com/#/db-es-tool?id=_2813-灵活指定索引名称和索引类型)
+[灵活指定索引名称和索引类型](https://esdoc.bbossgroups.com/#/db-es-tool?id=_4813-%e7%81%b5%e6%b4%bb%e6%8c%87%e5%ae%9a%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0%e5%92%8c%e7%b4%a2%e5%bc%95%e7%b1%bb%e5%9e%8b)
 
-[设置索引文档id机制](https://esdoc.bbossgroups.com/#/db-es-tool?id=_284-设置文档id机制)
+[设置索引文档id机制](https://esdoc.bbossgroups.com/#/db-es-tool?id=_484-%e8%ae%be%e7%bd%ae%e6%96%87%e6%a1%a3id%e6%9c%ba%e5%88%b6)
 
 ## 2.3 文件输出插件
 
