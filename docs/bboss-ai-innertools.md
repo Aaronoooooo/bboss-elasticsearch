@@ -17,6 +17,7 @@
 | `CodeExecuteFunctionTool` | 代码执行   | 3          | 动态编译运行 Java，调用 Python/Node 执行 Python/JavaScript,可以指定工作目录，python和nodejs环境路径 |
 | `FileFunctionTool`        | 文件系统   | 9          | 文件读写、拷贝、删除、属性查询、编码识别、目录遍历，可以指定base工作目录，限定只能操作指定目录下面的文件和目录 |
 | `GetOSFunctionTool`       | 系统信息   | 1          | 获取 OS 名称/版本/架构及 CPU 核数/型号、获取服务器系统时间   |
+| `HitlTaskcallTool`        | 人工介入   | 1          | HITL（Human-in-the-Loop）人工介入工具，当 AI 无法独立完成任务时调用 |
 
 ### 1.3 通用注册方式
 
@@ -30,6 +31,7 @@ agent.registBeanTool(new GetOSFunctionTool(60));          // 60 秒超时
 agent.registBeanTool(new CLIShellFunctionTool(60));
 agent.registBeanTool(new CodeExecuteFunctionTool(60));
 agent.registBeanTool(new FileFunctionTool("/data/safe"));  // 限制文件操作基目录
+agent.registBeanTool(new HitlTaskcallTool());              // 人工介入工具
 ```
 
 ### 1.4 通用配置约定
@@ -395,13 +397,168 @@ console.log(unique);
 
 ---
 
-## 五、GetOSFunctionTool —— 操作系统信息查询工具
+## 五、HitlTaskcallTool —— 人工介入工具（HITL）
 
 ### 5.1 功能说明
 
-获取当前运行环境的操作系统及 CPU 信息，**无入参**。
+HITL（Human-in-the-Loop）人工介入工具允许在智能体执行过程中，当遇到需要人工决策的关键节点时，暂停智能体执行并等待人工介入处理。
+
+**适用场景**：
+
+| 场景 | 说明 |
+|------|------|
+| 复杂问题需要人类专业判断 | AI 无法独立完成，需要领域专家介入 |
+| 敏感操作需要人工确认 | 如代码修改、数据删除等高危操作 |
+| 任务执行结果不符合预期 | 需要人工调整后继续执行 |
+| 超出 AI 权限范围的操作 | 需要人工授权或审批 |
 
 ### 5.2 配置选项
+
+| 配置方式 | 说明 |
+|----------|------|
+| `HitlTaskcallTool()` | 默认构造，无需额外配置 |
+
+> **前置要求**：使用该工具前需先初始化 `HitlTaskHelper`，配置数据源和（可选）Redis 集群通道。
+
+### 5.3 工具方法详解
+
+#### 5.3.1 hitlTaskTool
+
+**参数说明**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `hitlTaskReason` | `String` | **是** | 人工介入原因，需包含：1.任务背景与已执行步骤 2.当前卡住的具体原因（技术障碍/权限限制/信息缺失等）3.建议人类关注的关键点或待决策事项 4.期望人类提供的具体帮助；格式清晰，精简聚焦，便于人类快速理解 |
+
+**返回结果（Map）**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `taskId` | `String` | 任务 ID，用于后续处理和查询 |
+| `status` | `String` | 任务状态（pending/processed/refused/timeout） |
+| `message` | `String` | 任务创建结果描述 |
+| `error` | `String` | 错误信息（仅失败时返回） |
+
+### 5.4 完整使用示例
+
+#### 5.4.1 单节点模式配置
+
+```java
+import org.frameworkset.spi.ai.AIAgent;
+import org.frameworkset.spi.ai.hitl.HitlTaskHelper;
+import org.frameworkset.spi.ai.service.AgentSessionService;
+import org.frameworkset.spi.ai.service.impl.AgentSessionServiceImpl;
+import org.frameworkset.spi.ai.tools.HitlTaskcallTool;
+import org.frameworkset.util.SimpleStringUtil;
+
+public class HitlSingleNodeExample {
+    public static void main(String[] args) {
+        // 1. 初始化数据源
+        SQLUtil.startPool("visualops",
+                "com.mysql.cj.jdbc.Driver",
+                "jdbc:mysql://localhost:3306/bboss",
+                "root", "password",
+                "select 1");
+
+        // 2. 配置 AgentSessionService
+        AgentSessionService agentSessionService = new AgentSessionServiceImpl();
+        agentSessionService.setDatasource("visualops");
+
+        // 3. 初始化 HitlTaskHelper（单节点模式）
+        HitlTaskHelper.getHitlTaskHelper()
+                .setAgentSessionService(agentSessionService)
+                .init();
+
+        // 4. 创建智能体并注册 Hitl 工具
+        AIAgent agent = new AIAgent();
+        agent.setEnableLoopToolCall(true);
+        agent.setMaxLoopToolCalls(80);
+        agent.registBeanTool(new HitlTaskcallTool());
+
+        // 5. 后续：构建消息并调用...
+    }
+}
+```
+
+#### 5.4.2 集群模式配置（需要 Redis）
+
+```java
+// 1. 配置 Redis（集群模式需要）
+RedisConfig redisConfig = new RedisConfig();
+redisConfig.setName("test")
+        .setAuth("password")
+        .setServers("101.13.6.7:6381,101.13.6.7:6382")
+        .setMode(RedisDB.mode_cluster);
+RedisFactory.builRedisDB(redisConfig);
+
+// 2. 初始化 HitlTaskHelper（集群模式）
+HitlTaskHelper.getHitlTaskHelper()
+        .setAgentSessionService(agentSessionService)
+        .setRedisChannel("test", RedisHitlTaskCallListener.DEFAULT_CHANNEL)
+        .init();
+```
+
+#### 5.4.3 人工处理任务
+
+```java
+import org.frameworkset.spi.ai.hitl.HitlTaskHelper;
+
+// 模拟人工处理（同意）
+Map<String, Object> hitlTaskData = new LinkedHashMap<>();
+hitlTaskData.put("confirm", "确认修改");
+hitlTaskData.put("otherData", "用户补充意见");
+HitlTaskHelper.handleHitlCallTask(hitlTaskData, null, hitlTaskId);
+
+// 模拟人工拒绝
+// HitlTaskHelper.refuseHitlCallTask(hitlTaskData, null, hitlTaskId);
+```
+
+### 5.5 异常处理机制
+
+`HitlTaskcallTool` 内部实现了多层异常保护：
+
+| 保护机制 | 说明 |
+|----------|------|
+| **参数 null/空白校验** | 防止空任务传递给人工 |
+| **chatObject null 检查** | 防御非对话上下文调用 |
+| **HitlTaskHelper null 检查** | 防御组件未初始化场景 |
+| **异常捕获** | 记录错误日志并返回友好提示，不会中断智能体执行 |
+
+### 5.6 技能中声明使用
+
+在 SKILL.md 技能文件中，通过自然语言描述触发条件：
+
+```markdown
+## step 5: 问题修复
+- 请生成修复后的代码
+- 调用文件处理工具保存修改后的代码
+- 如果存在人工介入工具 hitlTaskTool，则调用人工介入任务工具 hitlTaskTool，通知人工介入确认后，才能保存修复后的代码到原始文件，否则忽略保存代码到原始文件。
+- 修复问题时，要指出问题的位置和原因。
+- 修复后，要检查是否解决了问题。
+```
+
+**hitlTaskReason 内容模板**：
+
+```
+【任务背景】代码审查任务已完成，发现并生成了修复方案
+【已执行步骤】
+1. 分析了用户提交的 Java 代码
+2. 检测到空指针异常风险（第 45 行）
+3. 生成了修复代码
+【待确认操作】将修复后的代码保存到原始文件 /path/to/OriginalFile.java
+【建议关注】修复涉及业务逻辑变更，请确认修复方案正确
+【期望决策】是否确认保存修复代码？（是/否）
+```
+
+---
+
+## 六、GetOSFunctionTool —— 操作系统信息查询工具
+
+### 6.1 功能说明
+
+获取当前运行环境的操作系统及 CPU 信息，**无入参**。
+
+### 6.2 配置选项
 
 | 配置方式                          | 说明                      |
 | --------------------------------- | ------------------------- |
@@ -409,9 +566,9 @@ console.log(unique);
 | `GetOSFunctionTool(long timeout)` | 指定超时（秒）            |
 | `setTimeout(long timeout)`        | 链式设置超时，返回 `this` |
 
-### 5.3 工具方法详解
+### 6.3 工具方法详解
 
-#### 5.3.1 getOS2ndCpu
+#### 6.3.1 getOS2ndCpu
 
 **参数**：无
 
@@ -436,13 +593,13 @@ console.log(unique);
 
 ---
 
-## 六、综合使用示例
+## 七、综合使用示例
 
-### 6.1 多工具协作场景
+### 7.1 多工具协作场景
 
 以下示例展示结合 OS 信息查询、脚本生成执行、代码执行、文件读写的多步骤任务。
 
-### 6.2 完整代码示例
+### 7.2 完整代码示例
 
 ```java
 import org.frameworkset.spi.ai.AIAgent;
@@ -489,7 +646,7 @@ public class MultiToolExample {
 }
 ```
 
-### 6.3 预期工具调用链
+### 7.3 预期工具调用链
 
 | 步骤 | 工具调用                                        | 目的               |
 | ---- | ----------------------------------------------- | ------------------ |
@@ -500,11 +657,11 @@ public class MultiToolExample {
 
 ---
 
-### 6.4 代码生成与执行案例
+### 7.4 代码生成与执行案例
 
 本案例演示如何借助工具检索机制，让大模型根据用户指令动态生成 Java / Python / JavaScript 三种语言的代码并执行，最后将生成的代码与执行结果以 Markdown 格式写入文件。
 
-#### 6.4.1 涉及的内置工具
+#### 7.4.1 涉及的内置工具
 
 | 工具类 | 说明 |
 |--------|------|
@@ -527,7 +684,7 @@ new CodeExecuteFunctionTool(60)                  // 设置超时时间为 60 秒
 //				.setNodejsPath("C:/Program Files/nodejs/") //设置nodejs环境路径，用于执行javascript代码; 
 ```
 
-#### 6.4.2 任务指令示例
+#### 7.4.2 任务指令示例
 
 任务指令通过资源文件 `#[codeexecute-prompt.txt,type=resource]` 加载，可包含如下需求：
 
@@ -556,7 +713,7 @@ new CodeExecuteFunctionTool(60)                  // 设置超时时间为 60 秒
 将前面生成的代码和执行结果以Markdown格式写入文件：C:\data\ai\aigenfiles\tools\code-gen-execute.md
 ```
 
-#### 6.4.3 完整使用示例
+#### 7.4.3 完整使用示例
 
 参考 [CodeExecuteDBTest.java](https://gitee.com/bboss/bboss-ai/blob/main/bboss-ai/src/test/java/org/frameworkset/spi/ai/tools/CodeExecuteDBTest.java)：
 
@@ -617,14 +774,14 @@ public static void executeCodeTest( ) throws InterruptedException {
 }
 ```
 
-#### 6.4.4 关键说明
+#### 7.4.4 关键说明
 
 1. **工具检索关键词与 `@Tool` description 对应**：`setKeywordToolSearcher` 中传入的关键词需与工具方法的 `description` 文本相匹配。例如 `"编译并执行 Java 代码"` 与 `executeJava` 的描述完全一致，可确保该工具方法被准确命中。
 2. **多工具协同**：本案例同时注册了三个工具组件（`GetOSFunctionTool`、`CodeExecuteFunctionTool`、`FileFunctionTool`），通过关键词检索机制从所有注册的工具方法中筛选出本次任务所需的方法子集，避免向大模型传递无关工具，降低上下文负担。
 3. **多语言执行能力**：`CodeExecuteFunctionTool` 通过独立线程池执行代码，支持超时控制与异常捕获，自动清理临时编译产物，适用于智能体动态生成并执行代码的场景。
 4. **循环工具调用**：`setEnableLoopToolCall(true)` 与 `setMaxLoopToolCalls(80)` 启用智能体多次调用工具机制，支持生成代码 → 执行代码 → 收集结果 → 写入文件的多步骤工作流。
 
-#### 6.4.5 执行结果示例
+#### 7.4.5 执行结果示例
 
 完整的执行结果文档（生成于 `C:\data\ai\aigenfiles\tools\code-gen-execute.md`）如下：
 
@@ -699,11 +856,11 @@ Hello World
 ~~~
 
 
-## 七、注意事项与安全建议
+## 八、注意事项与安全建议
 
-### 7.1 安全风险
+### 8.1 安全风险
 
-#### 7.1.1 Shell/代码执行风险
+#### 8.1.1 Shell/代码执行风险
 
 | 工具方法            | 风险等级   | 说明                                 |
 | ------------------- | ---------- | ------------------------------------ |
@@ -718,7 +875,7 @@ Hello World
 > - 限制网络访问
 > - 开启严格的资源配额
 
-#### 7.1.2 路径穿越防护
+#### 8.1.2 路径穿越防护
 
 | 防护措施               | 说明                                                         |
 | ---------------------- | ------------------------------------------------------------ |
@@ -735,9 +892,9 @@ safeTool.addBaseDirectory("d1","d2");
 FileFunctionTool unsafeTool = new FileFunctionTool();
 ```
 
-### 7.2 环境依赖
+### 8.2 环境依赖
 
-#### 7.2.1 运行时环境要求
+#### 8.2.1 运行时环境要求
 
 | 工具                | 依赖要求                                         | 验证方式                                                     |
 | ------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
@@ -746,7 +903,7 @@ FileFunctionTool unsafeTool = new FileFunctionTool();
 | `executeJavaScript` | JDK 内置 Nashorn 引擎 或 系统 PATH 中包含 `node` | Nashorn 不可用时自动回退到 Node                              |
 | `executeBash`       | Windows 需 `cmd.exe`；其他平台需 `/bin/sh`       | 平台标准组件                                                 |
 
-#### 7.2.2 环境检查示例
+#### 8.2.2 环境检查示例
 
 ```java
 // 启动时检查环境
@@ -768,9 +925,9 @@ public void checkEnvironment() {
 }
 ```
 
-### 7.3 超时与循环控制
+### 8.3 超时与循环控制
 
-#### 7.3.1 超时保护
+#### 8.3.1 超时保护
 
 | 配置建议     | 说明                                                      |
 | ------------ | --------------------------------------------------------- |
@@ -785,19 +942,19 @@ CodeExecuteFunctionTool codeTool = new CodeExecuteFunctionTool(30); // 短任务
 GetOSFunctionTool osTool = new GetOSFunctionTool(10);            // 快速任务 10 秒
 ```
 
-#### 7.3.2 循环调用限制
+#### 8.3.2 循环调用限制
 
 | 配置项                        | 说明                               | 推荐值                   |
 | ----------------------------- | ---------------------------------- | ------------------------ |
 | `setEnableLoopToolCall(true)` | 启用循环工具调用，支持多步骤任务   | 复杂任务开启             |
 | `setMaxLoopToolCalls(int)`    | 最大循环次数，防止模型陷入无限循环 | 20-100，视任务复杂度而定 |
 
-​```java
+```java
 agent.setEnableLoopToolCall(true);
 agent.setMaxLoopToolCalls(50);  // 50 次后强制停止
 ```
 
-### 7.4 临时资源管理
+### 8.4 临时资源管理
 
 | 资源类型            | 清理策略                   | 注意事项                                                  |
 | ------------------- | -------------------------- | --------------------------------------------------------- |
@@ -816,9 +973,9 @@ codeTool.setCompileOutputDir("/tmp/ai-compile");
 
 ---
 
-## 八、附录
+## 九、附录
 
-### 8.1 工具方法快速索引
+### 9.1 工具方法快速索引
 
 | 序号 | 工具类                    | 方法名               | 功能简述             |
 | ---- | ------------------------- | -------------------- | -------------------- |
@@ -836,8 +993,9 @@ codeTool.setCompileOutputDir("/tmp/ai-compile");
 | 12   | `FileFunctionTool`        | `getFileAttributes`  | 获取文件属性         |
 | 13   | `FileFunctionTool`        | `detectFileEncoding` | 检测文件编码         |
 | 14   | `GetOSFunctionTool`       | `getOS2ndCpu`        | 获取 OS 和 CPU 信息  |
+| 15   | `HitlTaskcallTool`        | `hitlTaskTool`       | 发起人工介入请求     |
 
-### 8.2 常见问题（FAQ）
+### 9.2 常见问题（FAQ）
 
 #### Q1: 执行 `executeJava` 时报错 "JavaCompiler 不可用"？
 
@@ -873,10 +1031,11 @@ codeTool.setCompileOutputDir("/tmp/ai-compile");
 
 **A**：启用循环工具调用（`setEnableLoopToolCall(true)`），并设置合适的系统提示词（`SystemPrompt`），引导模型按正确顺序执行。
 
-### 8.3 版本更新日志
+### 9.3 版本更新日志
 
 | 版本  | 日期       | 更新内容                                 |
 | ----- | ---------- | ---------------------------------------- |
+| 1.0.1 | 2026-07-19 | 新增 HitlTaskcallTool 人工介入工具，共 5 个工具类、15 个工具方法 |
 | 1.0.0 | 2026-07-04 | 初始版本，包含 4 个工具类、14 个工具方法 |
 
 ---
