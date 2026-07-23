@@ -263,6 +263,19 @@ console.log(unique);
 
 > **⚠️ 路径校验警告**：设置 `baseDirectory` 后，所有路径经规范化（统一分隔符、去重复斜杠）后必须以基目录开头，否则抛出 `IllegalArgumentException`。
 
+#### 4.2.1 限制工具操作目录
+
+配置文件操作工具允许操作和访问的目录：可以指定多个
+
+```java
+//注册文件操作工具，用于读取文件,需要设置运行文件工具操作的目录清单，禁止文件工具操作清单之外的目录
+String[] baseDirs = agentBootrap.getHitlFileToolDasedirs();
+FileFunctionTool fileFunctionTool = new FileFunctionTool( );
+if(baseDirs != null && baseDirs.length > 0){
+    fileFunctionTool.addBaseDirectory(baseDirs);
+}
+```
+
 ### 4.3 工具方法详解
 
 #### 4.3.1 文件操作类

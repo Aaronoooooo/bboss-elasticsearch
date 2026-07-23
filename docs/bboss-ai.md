@@ -602,6 +602,57 @@ chatAgentMessage.setModel("deepseek-v4-pro")
        .setPrompt(question);
 ```
 
+### 3.7 与spring boot 集成
+
+bboss ai与spring boot集成实现智能体问答案例代码：
+
+```java
+@RequestMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE, method = {RequestMethod.POST, RequestMethod.GET})
+public SseEmitter stream(@RequestBody ChatRequest request, HttpServletResponse response) {
+    response.setHeader("X-Accel-Buffering", "no");
+    response.setHeader("Cache-Control", "no-cache");
+    if (request == null || request.getSessionId() == null || request.getSessionId().isBlank()) {
+        throw new BusinessException(400, "sessionId is required");
+    }
+    if (request.getQuestion() == null || request.getQuestion().isBlank()) {
+        throw new BusinessException(400, "question is required");
+    }
+    SseEmitter emitter = new SseEmitter(600000L);
+
+    String model = request.getModel();
+    log.info("Received stream request: id={}, sessionId={}, model={}",
+            request.getId(), request.getSessionId(), model == null ? "<default>" : model);
+
+    try {
+        if (request.getDomain() == null) {
+            request.setDomain(AgentConstants.RAGKN_AGENT_DOMAIN);
+        }
+        ragQAService.streamFluxAdapted(request.getId(),
+                request.getSessionId(),
+                request.getUserId(),
+                request.getQuestion(),
+                model, request.getDomain(),request.isThinking(), new FluxRagStreamCallback(emitter, request.getId()));
+    } catch (AIRuntimeException e) {
+        log.error("[RAG-V2] stream unexpected failure id={}", request.getId(), e);
+        emitter.completeWithError(e);
+        throw e;
+    } catch (Exception e) {
+        log.error("[RAG-V2] stream unexpected failure id={}", request.getId(), e);
+        emitter.completeWithError(e);
+    }
+    return emitter;
+}
+```
+
+注意：nginx会自动缓存sse stream消息，如果后续无消息到来时，导致浏览器端迟迟收不到缓存中的消息数据，可通过以下配置禁用nginx对sse服务的缓存：
+
+```java
+response.setHeader("X-Accel-Buffering", "no");
+    response.setHeader("Cache-Control", "no-cache");
+```
+
+
+
 ## 四、图片识别（视觉大模型）
 
 ### 4.1 单张图片识别
