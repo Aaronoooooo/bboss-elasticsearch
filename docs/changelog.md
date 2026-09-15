@@ -77,8 +77,9 @@ https://esdoc.bbossgroups.com/#/bboss-build
 4. 数据交换改进：增加多字段记录切割功能，
 5. 数据交换改进：修复数据交换作业，外部调度不能正常工作问题（引入节假日机制导致的问题）
 6. Elasticsearch输出插件改进：动态生成索引名称和类型时，可以从临时变量值获取索引名称和类型变量值
-7. Elasticsearch输入插件改进：增量同步增加函数方式获取增量字段值功能，用于处理在复杂结构中获取增量字段值，同时务必设置增量字段名称
-8. Hbase输出插件改进：可以设置timestamp时间戳字段，如果源库是Hbase，可以直接将源记录的时间戳设置为输出记录的时间戳
+7. Elasticsearch输入插件改进：增量[同步增加函数方式获取增量字段值](https://esdoc.bbossgroups.com/#/db-es-tool?id=_48512-%E9%80%9A%E8%BF%87%E5%87%BD%E6%95%B0%E8%8E%B7%E5%8F%96%E5%A2%9E%E9%87%8F%E5%AD%97%E6%AE%B5%E5%80%BC)功能，用于处理在复杂结构中获取增量字段值，同时务必设置增量字段名称
+8. Hbase输出插件改进：可以[设置timestamp时间戳字段](https://esdoc.bbossgroups.com/#/datatran-plugins?id=_293-%E8%AE%BE%E7%BD%AE%E8%BE%93%E5%87%BA%E8%AE%B0%E5%BD%95%E7%9A%84timestamp)，如果源库是Hbase，可以直接将源记录的时间戳设置为输出记录的时间戳
+9. 数据交换改进：完善[增量状态sql配置机制](https://esdoc.bbossgroups.com/#/db-es-tool?id=_4858-%E5%A2%9E%E9%87%8F%E7%8A%B6%E6%80%81%E5%AD%98%E5%82%A8%E6%95%B0%E6%8D%AE%E5%BA%93)，当数据库类型为不支持类型时，可以自行设置状态管理表和状态管理历史表建表sql
 
 # [Agent] V6.5.6 功能改进-20260815(待发布)
 
@@ -99,6 +100,7 @@ https://esdoc.bbossgroups.com/#/bboss-build
 15. 智能体框架改进：[增加与spring ai mcp服务对接请求拦截器适配器](https://gitee.com/bboss/bboss-ai/commit/25f3be6fbb858f964e7e153e8b07270ea2b5673d)
 16. 智能体框架改进：[完善kimi模型token使用量信息采集功能](https://gitee.com/bboss/bboss-ai/commit/a7a21bdea3aa7380162d44ac8c3c5b79ed2e4d6d)
 17. 智能体框架改进：[处理文件操作工具存在的内存泄露、路径穿透风险漏洞](https://gitee.com/bboss/bboss-ai/commit/b30b4cd2b39180f2a9cea0afffe5f8f1a459145b)
+18. 智能体框架改进：增加[Grep文件内容检索和统计工具](https://esdoc.bbossgroups.com/#/bboss-ai-greptool)
 
 # [Agent] V6.5.5 功能改进-20260710
 

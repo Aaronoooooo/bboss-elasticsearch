@@ -59,9 +59,9 @@
         <version>7.5.6</version>
     </dependency>
 ```
-下面两个坐标只需根据spring boot版本导入一个即可
+在spring boot项目中，如需使用spring boot starter来初始化bboss，可以根据spring boot版本，选择对应的starter导入即可
 
-如果是 spring boot 1.x,2.x 项目，还需导入maven坐标:
+spring boot 1.x,2.x 项目，导入maven坐标:
 
 ```xml
     <dependency>
@@ -70,7 +70,7 @@
         <version>7.5.6</version>
     </dependency>
 ```
-如果是 spring boot 3.x,+ 项目，还需导入maven坐标:
+spring boot 3.x,+ 项目，导入maven坐标:
 
 ```xml
     <dependency>
@@ -79,6 +79,17 @@
         <version>7.5.6</version>
     </dependency>
 ```
+
+spring boot 4.x,+ 项目，导入maven坐标:
+
+```xml
+    <dependency>
+        <groupId>com.bbossgroups.plugins</groupId>
+        <artifactId>bboss-elasticsearch-spring-boot4-starter</artifactId>
+        <version>7.5.7</version>
+    </dependency>
+```
+
 
 
 ## 1.2 一般java项目集成

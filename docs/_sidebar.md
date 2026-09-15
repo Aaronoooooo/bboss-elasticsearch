@@ -11,6 +11,7 @@
   - [智能体工具可观测性指南](AgentTraceHolder-usage.md)
   - [内置工具使用文档](bboss-ai-innertools.md)
   - [人工介入Hitl功能使用文档](bboss-ai-hitl.md)
+  - [文件检索工具Grep使用指南](bboss-ai-greptool.md)
   - [工具方法审核使用文档](bboss-ai-toolaudit.md)
   - [智能问答和会话管理](bboss-ai-qa.md)
 - 微服务框架

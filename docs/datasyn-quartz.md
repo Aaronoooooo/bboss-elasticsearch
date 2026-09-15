@@ -6,29 +6,118 @@ https://doc.bbossgroups.com/#/quartz/raider
 
 # 一、基于bboss 管理的quartz同步作业demo
 
- https://github.com/bbossgroups/db-elasticsearch-tool/blob/master/src/main/java/org/frameworkset/elasticsearch/imp/QuartzES2DBImportTask.java 
+https://gitee.com/bboss/db-elasticsearch-tool/blob/master/src/main/java/org/frameworkset/elasticsearch/imp/QuartzTimestampImportTask.java
+
+```java
+package org.frameworkset.elasticsearch.imp;
+ 
+
+import org.frameworkset.tran.config.ImportBuilder;
+import org.frameworkset.tran.plugin.db.input.DBInputConfig;
+import org.frameworkset.tran.plugin.es.output.ElasticsearchOutputConfig;
+import org.frameworkset.tran.schedule.DataStreamBuilder;
+import org.frameworkset.tran.schedule.ImportIncreamentConfig;
+import org.frameworkset.tran.schedule.quartz.AbstractQuartzJobHandlerV2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+ 
+public class QuartzTimestampImportTask extends AbstractQuartzJobHandlerV2 {
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    protected  DataStreamBuilder buildDataStreamBuilder(){
+        return params -> {
+            ImportBuilder importBuilder = new ImportBuilder();
+
+
+            //指定导入数据的sql语句，必填项，可以设置自己的提取逻辑，
+            // 设置增量变量log_id，增量变量名称#[log_id]可以多次出现在sql语句的不同位置中，例如：
+            // select * from td_sm_log where log_id > #[log_id] and parent_id = #[log_id]
+            // log_id和数据库对应的字段一致,就不需要设置setLastValueColumn信息，
+            // 但是需要设置setLastValueType告诉工具增量字段的类型
+            DBInputConfig dbInputConfig = new DBInputConfig();
+            dbInputConfig.setSql("select * from td_sm_log where LOG_OPERTIME > #[LOG_OPERTIME]");
+            importBuilder.setInputConfig(dbInputConfig);
+//     importBuilder.addIgnoreFieldMapping("remark1");
+            /**
+             * es相关配置
+             */
+            ElasticsearchOutputConfig elasticsearchOutputConfig = new ElasticsearchOutputConfig();
+            elasticsearchOutputConfig
+                    .setIndex("dbdemo"); //必填项
+//              .setIndexType("dbdemo") //es 7以后的版本不需要设置indexType，es7以前的版本必需设置indexType
+//           .setRefreshOption("refresh")//可选项，null表示不实时刷新，importBuilder.setRefreshOption("refresh");表示实时刷新
+            elasticsearchOutputConfig.setEsIdField("log_id");//设置文档主键，不设置，则自动产生文档id
+
+            elasticsearchOutputConfig.setDebugResponse(false);//设置是否将每次处理的reponse打印到日志文件中，默认false
+            elasticsearchOutputConfig.setDiscardBulkResponse(false);//设置是否需要批量处理的响应报文，不需要设置为false，true为需要，默认false
+            importBuilder.setOutputConfig(elasticsearchOutputConfig);
+
+            importBuilder.setUseJavaName(true) //可选项,将数据库字段名称转换为java驼峰规范的名称，true转换，false不转换，默认false，例如:doc_id -> docId
+                    .setUseLowcase(false)  //可选项，true 列名称转小写，false列名称不转换小写，默认false，只要在UseJavaName为false的情况下，配置才起作用
+                    .setPrintTaskLog(true) //可选项，true 打印任务执行日志（耗时，处理记录数） false 不打印，默认值false
+                    .setBatchSize(10);  //可选项,批量导入es的记录数，默认为-1，逐条处理，> 0时批量处理
+
+            importBuilder.setFromFirst(true);//setFromfirst(false)，如果作业停了，作业重启后从上次截止位置开始采集数据，
+            //setFromfirst(true) 如果作业停了，作业重启后，重新开始采集数据
+            importBuilder.setLastValueStorePath("quartzlogtable_import");//记录上次采集的增量字段值的文件路径，作为下次增量（或者重启后）采集数据的起点，不同的任务这个路径要不一样
+//     importBuilder.setLastValueStoreTableName("logs");//记录上次采集的增量字段值的表，可以不指定，采用默认表名increament_tab
+            importBuilder.setLastValueType(ImportIncreamentConfig.TIMESTAMP_TYPE);//如果没有指定增量查询字段名称，则需要指定字段类型：ImportIncreamentConfig.NUMBER_TYPE 数字类型
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                Date date = format.parse("2000-01-01");
+                importBuilder.setLastValue(date);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+      
+            //映射和转换配置结束
+
+            /**
+             * 内置线程池配置，实现多线程并行数据导入功能，作业完成退出时自动关闭该线程池
+             */
+            importBuilder.setParallel(true);//设置为多线程并行批量导入,false串行
+            importBuilder.setQueue(10);//设置批量导入线程池等待队列长度
+            importBuilder.setThreadCount(50);//设置批量导入线程池工作线程数量
+            importBuilder.setContinueOnError(true);//任务出现异常，是否继续执行作业：true（默认值）继续执行 false 中断作业执行
+
+            return importBuilder;
+
+        };
+        
+    }
+    
+ 
+}
+```
 
 调试测试以及运行quatz作业同步功能方法，按如下配置进行操作：
 
- 1.在配置文件中添加quartz作业任务配置-[resources/org/frameworkset/task/quarts-task.xml](https://github.com/bbossgroups/db-elasticsearch-tool/blob/master/src/main/resources/org/frameworkset/task/quarts-task.xml)相关内容
+ 1.在配置文件中添加quartz作业任务配置-[resources/org/frameworkset/task/quarts-task.xml](https://gitee.com/bboss/db-elasticsearch-tool/blob/master/src/main/resources/org/frameworkset/task/quarts-task.xml)相关内容
 
 ```xml
 <list>
-	<property name="QuartzImportTask" jobid="QuartzImportTask"
-					  bean-name="QuartzImportTask"
+	<property name="quartzImportTask" jobid="quartzImportTask"
+					  bean-name="QuartzTimestampImportTask"
 					  method="execute"
 					  cronb_time="${quartzImportTask.crontime:*/20 * * * * ?}" used="true"
 					  shouldRecover="false"
 			/>
 </list>
 <!-- 作业组件配置-->
-<property name="QuartzImportTask" class="org.frameworkset.elasticsearch.imp.QuartzImportTask"
+<property name="QuartzTimestampImportTask" class="org.frameworkset.elasticsearch.imp.QuartzTimestampImportTask"
 		  destroy-method="destroy"
 		  init-method="init"
 />
 ```
 
- 2.添加一个带main方法的作业运行
+其中的cronb_time="${quartzImportTask.crontime:*/20 * * * * ?}"，为quartz 定时规则， quartzImportTask.crontime为application.properties文件中的属性变量名称，如果没有配置，则使用默认配置
+
+*/20 * * * * ?
+
+2.添加一个带main方法的作业运行
 
 ```java
  public class QuartzTest {
@@ -40,14 +129,13 @@ https://doc.bbossgroups.com/#/quartz/raider
 
  然后运行main方法即可
 
-
-
  3.实际运行和发布作业方法， 使用quartz定时器运行导入数据作业时，先参考第一步做quartz作业任务配置，然后将application.properties文件中的mainclass设置为如下值即可：
 
  
 
 ```properties
-mainclass=org.frameworkset.task.Main
+mainclass=org.frameworkset.task.QuartzTest
+quartzImportTask.crontime=*/20 * * * * ?
 ```
 
  4.发布和运行quartz定时任务：参考章节[【发布版本】](https://esdoc.bbossgroups.com/#/db-es-datasyn?id=_12-%e5%8f%91%e5%b8%83%e7%89%88%e6%9c%ac)

@@ -725,6 +725,46 @@ config.addConfig(new FileConfig()
 );
 ```
 
+### 1.4.1.5 忽略正在生成的FTP文件
+
+在实际数据采集场景中，远程FTP服务器上的文件可能正在被写入。为避免采集到不完整的数据，bboss提供了灵活的过滤机制。您可以通过配置`FileFilter`，并利用`RemoteResourceInfo`获取文件的最后修改时间，来决定是否采集该文件。例如，您可以设置一个时间阈值（如2分钟），只采集那些在指定时间前就已生成完毕的文件。
+
+**请注意**：此时间判断逻辑仅对远程FTP/SFTP文件生效。对于本地文件，此条件不适用，文件将被正常采集。
+
+**配置示例**：
+```java
+FileConfig fileConfig = new FileConfig();
+fileConfig.setSourcePath(localDir)
+        .setFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(FilterFileInfo filterFileInfo, FileConfig fileConfig) {
+                String name = filterFileInfo.getFileName();
+                // 只处理特定前缀和后缀的文件
+                if (name.startsWith("SA_") && name.endsWith(".txt")) {
+                    // 获取远程文件对象
+                    Object fileObject = filterFileInfo.getFileObject();
+                    if (fileObject instanceof RemoteResourceInfo) {
+                        RemoteResourceInfo remoteResourceInfo = (RemoteResourceInfo) fileObject;
+                        // 获取文件修改时间（注意单位转换：秒 -> 毫秒）
+                        long mtime = remoteResourceInfo.getAttributes().getMtime() * 1000;
+                        long interval = System.currentTimeMillis() - mtime;
+                        
+                        // 仅当文件生成时间超过2分钟（120000毫秒）时才采集，
+                        // 从而有效避免采集到正在写入的文件
+                        return interval > 120000;
+                    } else {
+                        // 如果不是远程文件（例如本地文件），则正常采集
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+// ... 后续配置
+```
+
+此方案通过精确控制采集条件，确保了数据源的完整性和一致性，是处理实时写入FTP文件场景的推荐做法。
+
 ### 1.4.2 一次性扫描采集文件目录下所有文件
 
 ```java

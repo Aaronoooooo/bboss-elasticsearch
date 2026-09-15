@@ -13,6 +13,7 @@
 ```java
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
+@Documented
 public @interface Tool {
     String name() default "";           // 工具名称，默认为方法名
     String description();                // 工具描述，AI 根据此描述判断何时调用该工具
@@ -33,25 +34,41 @@ public @interface Tool {
 
 #### 1.2 @ToolParam 注解
 
-`@ToolParam` 标注在方法的参数上，用于描述每个参数的类型、含义和约束，最终会被转换为 JSON Schema 供 AI 模型识别。
+`@ToolParam` 可标注在**方法参数**和**类字段**上，用于描述每个参数/字段的类型、含义和约束，最终会被转换为 JSON Schema 供 AI 模型识别。当参数为复杂对象或数组时，框架会递归解析对象内部带有 `@ToolParam` 注解的字段作为子参数。
 
 ```java
-@Target({ElementType.PARAMETER})
+@Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
+@Documented
 public @interface ToolParam {
     String type() default "object";     // 参数类型：string/integer/number/array/object 等
     String name();                       // 参数名称
     String description();                // 参数描述，帮助 AI 理解如何填写该参数
-    boolean bean() default false;        // 若参数为 Bean，是否递归解析其字段作为子参数
-    String format() default "";          // 格式校验：email、hostname、ipv4、uuid 等
+
+    // ===== 数组元素配置（适用于原生数组类型，如 String[]） =====
+    String elementType() default "";          // 数组元素类型
+    String elementDescription() default "";   // 数组元素描述
+
+    // ===== 字符串格式约束 =====
+    String format() default "";          // 格式校验：email、hostname、ipv4、ipv6、uuid 等
     String pattern() default "";         // 正则表达式约束字符串格式
-    String arrayItemType() default "";   // 数组元素类型
+
+    // ===== 数组 items 配置（适用于简单类型数组，如 List<String>） =====
+    String arrayItemType() default "";
     String arrayItemDescription() default "";
-    String[] enumValues() default {};    // 枚举值约束
-    // 数值类型约束
-    String minimum() default "";
-    String maximum() default "";
-    String defaultValue() default "";
+
+    // ===== 枚举值约束 =====
+    String[] enumValues() default {};    // 枚举值列表，限制参数只能取指定值
+
+    // ===== 数值类型约束（适用于 number/integer 类型） =====
+    String constValue() default "";         // 固定为常数
+    String defaultValue() default "";       // 默认值
+    String minimum() default "";            // 最小值
+    String maximum() default "";            // 最大值
+    String exclusiveMinimum() default "";   // 不小于（排他最小值）
+    String exclusiveMaximum() default "";   // 不大于（排他最大值）
+    String multipleOf() default "";         // 必须为该值的倍数
+
     boolean required() default false;    // 是否必填
 }
 ```
@@ -61,16 +78,68 @@ public @interface ToolParam {
 |------|------|
 | `name` | 参数在 JSON Schema 中的名称。 |
 | `description` | 参数的业务含义描述。 |
-| `type` | 参数的数据类型，如 `string`、`integer`、`array`。 |
+| `type` | 参数的数据类型，如 `string`、`integer`、`array`。框架也会根据 Java 参数类型自动推断。 |
 | `required` | 是否必填。 |
-| `format` | 字符串格式校验，如 `email`、`ipv4`。 |
+| `format` | 字符串格式校验，支持 `email`、`hostname`、`ipv4`、`ipv6`、`uuid`。 |
 | `pattern` | 正则表达式，如 `^\d{6}$` 校验邮编。 |
 | `enumValues` | 枚举值列表，限制参数只能取指定值。 |
-| `bean` | 若参数是复杂对象，设置为 `true` 可自动展开其内部字段。 |
+| `elementType` | 原生数组（如 `String[]`）的元素类型。 |
+| `elementDescription` | 原生数组元素的描述。 |
+| `arrayItemType` | 简单集合（如 `List<String>`）的元素类型。 |
+| `arrayItemDescription` | 简单集合元素的描述。 |
+| `constValue` | 数值固定为常数。 |
+| `defaultValue` | 数值默认值。 |
+| `minimum` / `maximum` | 数值最小/最大值。 |
+| `exclusiveMinimum` / `exclusiveMaximum` | 排他最小/最大值。 |
+| `multipleOf` | 数值必须为该值的倍数。 |
 
 ---
 
-### 二、定义工具类
+### 二、参数类型自动识别机制
+
+`BeanToolHandle` 是注解工具的核心解析器，负责将 `@Tool` / `@ToolParam` 注解转换为 OpenAI 兼容的 Function Calling JSON Schema。解析过程中，框架会根据 Java 参数的**实际类型**自动推断 JSON Schema 类型，无需手动指定 `type` 属性。
+
+#### 2.1 Java 类型与 JSON Schema 类型映射
+
+| Java 类型 | JSON Schema 类型 | 说明 |
+|-----------|-----------------|------|
+| `java.lang.Object` | `object` | 通用对象 |
+| `java.lang.String` | `string` | 字符串 |
+| `int` / `Integer` | `integer` | 整数 |
+| `long` / `Long` | `number` | 数字 |
+| `double` / `Double` | `number` | 数字 |
+| `float` / `Float` | `number` | 数字 |
+| `boolean` / `Boolean` | `boolean` | 布尔值 |
+| `java.lang.Number` | `number` | 数字（父类） |
+| `java.util.List` | `array` | 数组 |
+| `java.util.Set` | `array` | 数组 |
+| `T[]`（原生数组） | `array` | 数组 |
+| `java.util.Map` | `map` | 映射 |
+| 其他自定义类 | `object` | 复杂对象 |
+
+#### 2.2 对象类型参数的递归解析
+
+当框架识别参数类型为 `object`（即自定义 Java 类）时，会调用 `parserToolObjectParams()` 递归解析该类的所有字段：
+
+1. 通过反射获取类的所有字段描述（`ClassUtil.getClassInfo` → `getPropertyDescriptors`）
+2. 筛选出带有 `@ToolParam` 注解的字段
+3. 对每个字段重复类型推断和约束提取（`enumValues`、`minimum`、`maximum`、`pattern` 等）
+4. 如果字段本身也是复杂对象或数组，继续递归解析
+
+这意味着 **`@ToolParam` 注解可以同时用在方法参数和类的字段上**，框架会自动递归处理嵌套结构。
+
+#### 2.3 数组类型参数的递归解析
+
+当框架识别参数类型为 `array`（即 `List`、`Set` 或原生数组）时，分两种情况处理：
+
+- **原生数组**（如 `String[]`）：使用 `@ToolParam` 的 `elementType` 和 `elementDescription` 属性指定数组元素类型和描述
+- **泛型集合**（如 `List<TodoItem>`）：通过反射获取泛型参数类型，递归调用 `parserToolArrayParams()` 解析元素类的 `@ToolParam` 注解字段
+
+如果集合元素是简单类型（如 `List<String>`），可通过 `arrayItemType` 和 `arrayItemDescription` 手动指定元素类型；如果元素是自定义对象，框架会自动递归解析其字段。
+
+---
+
+### 三、定义工具类
 
 通过注解，任何一个普通的 Java 类都可以被声明为 AI 工具集。
 
@@ -178,11 +247,155 @@ public class PreOrderTool {
 
 ---
 
-### 三、在工作流中注册和使用工具
+### 四、复杂参数：对象与数组嵌套解析
+
+当工具方法需要接收结构化的复杂参数时，可以定义带 `@ToolParam` 注解字段的 Java Bean 类作为方法参数或集合元素类型。框架会自动递归解析 Bean 字段的 `@ToolParam` 注解，生成嵌套的 JSON Schema。
+
+#### 4.1 示例：TodoTools 待办任务工具
+
+以下示例来自 bboss-ai 内置的 `TodoTools`，演示了数组对象参数、内部类字段级注解、枚举约束等高级用法：
+
+```java
+package org.frameworkset.spi.ai.tools;
+
+import org.frameworkset.spi.ai.model.annotation.Tool;
+import org.frameworkset.spi.ai.model.annotation.ToolParam;
+import java.util.List;
+
+public class TodoTools {
+
+    private static final String DESCRIPTION =
+        "Create and maintain a structured task list for the current session. Tracks progress,\n" +
+        "organizes multi-step work, and surfaces status to the user. Pass the COMPLETE updated\n" +
+        "list every call — this tool replaces the whole list (it does not merge).\n" +
+        "\n" +
+        "## When to use\n" +
+        "Use proactively when:\n" +
+        "- The task needs 3+ distinct steps or actions\n" +
+        "- The work is non-trivial and benefits from planning\n" +
+        "- The user gives multiple tasks (numbered or comma-separated) or asks for a todo list\n" +
+        "- New instructions arrive — capture them as todos\n" +
+        "- You start a task — mark it in_progress (only one at a time) before working\n" +
+        "- You finish a task — mark it completed and add any follow-ups you discovered\n" +
+        "\n" +
+        "## States\n" +
+        "- pending     — not started\n" +
+        "- in_progress — actively working (exactly ONE at a time)\n" +
+        "- completed   — finished successfully\n";
+
+    /**
+     * 工具方法：接收 List<TodoItem> 参数
+     * 框架识别 List 类型为 array，递归解析泛型 TodoItem 类的字段注解
+     */
+    @Tool(
+            name = "todo_write",
+            description = DESCRIPTION)
+    public String todoWrite(
+            @ToolParam(
+                    name = "todos",
+                    description = "The COMPLETE updated todo list. Replaces the existing list entirely.",
+                    required = true)
+            List<TodoItem> todos) {
+
+        // 业务逻辑：处理 todos 列表
+        // ...
+        return "Todo list updated.";
+    }
+
+    /**
+     * 内部类：作为数组元素类型
+     * 字段上的 @ToolParam 注解会被框架递归解析为 JSON Schema 的子属性
+     */
+    public static final class TodoItem {
+        @ToolParam(name = "content",
+                   description = "Brief, specific, actionable description of the task.",
+                   required = true)
+        private String content;
+
+        @ToolParam(name = "status",
+                   description = "One of: pending, in_progress, completed.",
+                   enumValues = {"pending", "in_progress", "completed"},
+                   required = true)
+        private String status;
+
+        @ToolParam(name = "priority",
+                   description = "Optional priority: high, medium, or low.",
+                   enumValues = {"high", "medium", "low"})
+        private String priority;
+
+        public String getContent() { return content; }
+        public String getStatus() { return status; }
+        public String getPriority() { return priority; }
+    }
+}
+```
+
+#### 4.2 生成的 JSON Schema 结构
+
+上述 `todo_write` 工具经 `BeanToolHandle` 解析后，生成如下 JSON Schema：
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "todo_write",
+    "description": "Create and maintain a structured task list ...",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todos": {
+          "type": "array",
+          "description": "The COMPLETE updated todo list. Replaces the existing list entirely.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Brief, specific, actionable description of the task."
+              },
+              "status": {
+                "type": "string",
+                "description": "One of: pending, in_progress, completed.",
+                "enum": ["pending", "in_progress", "completed"]
+              },
+              "priority": {
+                "type": "string",
+                "description": "Optional priority: high, medium, or low.",
+                "enum": ["high", "medium", "low"]
+              }
+            },
+            "required": ["content", "status"]
+          }
+        }
+      },
+      "required": ["todos"]
+    }
+  }
+}
+```
+
+**解析过程说明：**
+
+1. `@Tool(name="todo_write")` → 映射为 `function.name`
+2. `@ToolParam(name="todos") List<TodoItem>` → `getParamType(List.class)` 返回 `array`，属性 `type` 设为 `array`
+3. 框架检测到泛型参数 `TodoItem`，调用 `parserToolArrayParams(TodoItem.class)` 递归解析
+4. `TodoItem` 中三个字段带有 `@ToolParam` 注解：
+   - `content` → `type: string`（String 类型自动推断），`required: true`
+   - `status` → `type: string`，`enum: ["pending","in_progress","completed"]`，`required: true`
+   - `priority` → `type: string`，`enum: ["high","medium","low"]`，`required` 未设置（默认 false）
+5. `content` 和 `status` 被加入 `required` 数组；`priority` 因未设置 `required` 而不加入
+
+#### 4.3 字段级注解说明
+
+`@ToolParam` 的 `@Target` 同时包含 `PARAMETER` 和 `FIELD`，因此可以直接标注在 Java 类的字段上。当参数类型为 `object`（自定义类）或 `array`（集合元素为自定义类）时，框架会自动递归扫描这些字段注解并生成嵌套 Schema。框架通过类型推断自动处理，无需额外配置。
+
+---
+
+### 五、在工作流中注册和使用工具
 
 定义好工具类后，需要将其注册到 AI 智能体工作流中。
 
-#### 3.1 注册工具
+#### 5.1 注册工具
 
 使用 `BeanToolsRegist` 将工具类的实例注册为工具集：
 
@@ -195,7 +408,7 @@ ToolsRegist toolsRegist = new BeanToolsRegist(preOrderTool);
 ```
 
 
-#### 3.2 将工具绑定到智能体节点
+#### 5.2 将工具绑定到智能体节点
 
 在 `AINodeAgent` 中通过 `setToolsRegist()` 绑定工具：
 
@@ -213,7 +426,7 @@ planAgent.addRouteChoiceAgent(
 
 ---
 
-### 四、完整工作流示例（非流式）
+### 六、完整工作流示例（非流式）
 
 以下是一个完整的酒店+机票预订智能体工作流，演示了从路由判断到工具调用的完整流程：
 
@@ -349,7 +562,7 @@ public class BookingTest {
 
 ---
 
-### 五、流式输出版本
+### 七、流式输出版本
 
 如果需要在工具执行过程中实时看到 AI 的推理过程和结果，可以使用流式版本：
 
@@ -405,10 +618,10 @@ public class BookingStreamTest {
 
 ---
 
-### 六、常见问题与最佳实践
+### 八、常见问题与最佳实践
 
 1. **description 怎么写？**
-    - `@Tool` 的 `description` 应清晰描述工具的用途、适用场景、返回内容，这是 AI 判断是否调用的唯一依据。
+    - `@Tool` 的 `description` 应清晰描述工具的用途、适用场景、返回内容，这是 AI 判断是否调用的唯一依据。可以使用多行字符串编写详细的说明文档，包含使用时机、参数说明、规则等。
     - `@ToolParam` 的 `description` 应说明参数的业务含义、格式示例。
 
 2. **工具方法返回值**
@@ -417,14 +630,32 @@ public class BookingStreamTest {
 3. **多个工具类**
     - 可以创建多个工具类，分别用 `BeanToolsRegist` 注册，并绑定到不同的智能体节点。
 
-4. **参数为复杂对象**
-    - 保留参数，暂未实现，如果参数是自定义 Bean，在 `@ToolParam` 上设置 `bean = true`，框架会自动递归解析 Bean 的字段生成 JSON Schema。
+4. **参数为复杂对象（Bean）**
+    - 框架已支持复杂对象参数的自动递归解析。当方法参数为自定义 Java 类时，框架会自动识别为 `object` 类型，递归扫描类中带有 `@ToolParam` 注解的字段，生成嵌套的 JSON Schema 子属性。
+    - 框架通过 Java 类型自动推断并递归处理，无需额外配置。
+    - `@ToolParam` 可同时标注在方法参数（`ElementType.PARAMETER`）和类字段（`ElementType.FIELD`）上。
 
-5. **参数校验**
-    - 利用 `format`、`pattern`、`enumValues`、`minimum`、`maximum` 等属性，可以生成符合 JSON Schema 规范的参数约束，让 AI 输出更准确的参数值。
+5. **参数为数组/集合类型**
+    - 当参数为 `List<T>`、`Set<T>` 或 `T[]` 时，框架自动识别为 `array` 类型。
+    - 如果元素 `T` 为自定义对象，框架会递归解析 `T` 的 `@ToolParam` 字段作为 `items` 的子属性。
+    - 如果元素为简单类型（如 `List<String>`），可使用 `arrayItemType` 和 `arrayItemDescription` 指定元素类型和描述。
+    - 如果为原生数组（如 `String[]`），可使用 `elementType` 和 `elementDescription` 指定元素类型和描述。
+
+6. **参数校验**
+    - 利用 `format`（`email`、`ipv4` 等）、`pattern`（正则）、`enumValues`（枚举）、`minimum`/`maximum`（数值范围）、`exclusiveMinimum`/`exclusiveMaximum`（排他范围）、`multipleOf`（倍数）、`constValue`（常量）、`defaultValue`（默认值）等属性，可以生成符合 JSON Schema 规范的参数约束，让 AI 输出更准确的参数值。
+
+7. **参数名称**
+    - `@ToolParam` 的 `name` 属性指定参数在 JSON Schema 中的名称。若留空，则使用 Java 参数/字段的反射名称（注意：编译时需保留参数名，或使用框架的 `ClassUtil` 解析字段名）。
 
 ---
 
-### 七、总结
+### 九、总结
 
-通过 `@Tool` 和 `@ToolParam` 注解，开发者无需编写复杂的 JSON Schema，只需以自然的 Java 注解方式定义方法，即可让 AI 模型具备调用业务系统的能力。结合 `AIPlanAgent` 工作流，可以实现路由判断、并行查询、工具调用、结果汇总等复杂的智能体协作场景。
+通过 `@Tool` 和 `@ToolParam` 注解，开发者无需编写复杂的 JSON Schema，只需以自然的 Java 注解方式定义方法，即可让 AI 模型具备调用业务系统的能力。框架通过 `BeanToolHandle` 自动完成以下工作：
+
+- **类型自动推断**：根据 Java 参数类型（String、Integer、List、自定义类等）自动映射 JSON Schema 类型
+- **嵌套递归解析**：对 `object` 类型参数和 `array` 类型参数，自动递归解析带有 `@ToolParam` 注解的类字段，生成嵌套 Schema
+- **约束自动提取**：从注解中提取 `enumValues`、`minimum`、`maximum`、`pattern`、`format` 等约束，生成标准 JSON Schema
+- **必填参数收集**：自动将 `required = true` 的参数/字段收集到 `required` 数组中
+
+结合 `AIPlanAgent` 工作流，可以实现路由判断、并行查询、工具调用、结果汇总等复杂的智能体协作场景。

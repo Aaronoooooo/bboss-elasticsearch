@@ -1695,6 +1695,37 @@ ImportIncreamentConfig.STATUSID_POLICY_JOBID_QUERYSTATEMENT
 
 文件采集插件强制直接使用ImportIncreamentConfig.STATUSID_POLICY_JOBID_QUERYSTATEMENT策略
 
+##### 4.8.5.12 通过函数获取增量字段值
+
+可以通过函数接口LastValueFunction获取记录中的增量字段值，适用于记录结构很复杂的场景，例如增量位于Elasticsearch嵌套记录内部，举例说明如下：
+
+```java
+ importBuilder.setFixedRate(false)//参考jdk timer task文档对fixedRate的说明
+//                     .setScheduleDate(date) //指定任务开始执行时间：日期
+                .setDeyLay(deyLay) // 任务延迟执行deylay毫秒后执行
+                .setPeriod(period); //每隔period毫秒执行，如果不设置，只执行一次
+        //定时任务配置结束
+        importBuilder.setLastValueType(ImportIncreamentConfig.NUMBER_TYPE);//如果没有指定增量查询字段名称，则需要指定字段类型：ImportIncreamentConfig.NUMBER_TYPE 数字类型
+        importBuilder.setLastValueColumn("busiresult.globalUpdateTime");//手动指定数字增量查询字段，默认采用上面设置的sql语句中的增量变量名称作为增量查询字段的名称，指定以后就用指定的字段
+       importBuilder.setLastValueFunction((record, colName) -> {
+          Map busiresult = (Map) record.getValue("busiresult");
+          long globalUpdateTime = (long) busiresult.get("globalUpdateTime");
+          return globalUpdateTime;
+       });
+       importBuilder.setNumberTypeTimestamp(true); //设置延迟偏移量开关，如果不设置increamentEndOffset，标识将不起作用
+       importBuilder.setIncreamentEndOffset(increamentEndOffset); //指定增量截止时间与当前时间的偏移量
+```
+
+增量字段busiresult.globalUpdateTime，代表map类型字段busiresult内部的一个key值：
+
+```java
+Map busiresult = (Map) record.getValue("busiresult");
+          long globalUpdateTime = (long) busiresult.get("globalUpdateTime");
+          return globalUpdateTime;
+```
+
+
+
 #### 4.8.6 定时全量导入
 
 定时机制配置
